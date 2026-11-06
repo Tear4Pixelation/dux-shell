@@ -16,7 +16,7 @@ DListItem {
     signal pinRequested(var targetEntry)
     signal unpinRequested(var targetEntry)
     signal editRequested
-    signal previewRequested
+    signal entryHoverChanged(bool hovering)
 
     readonly property string entryType: modal ? modal.getEntryType(entry) : "text"
     readonly property string entryPreview: modal ? modal.getEntryPreview(entry) : ""
@@ -29,15 +29,16 @@ DListItem {
     readonly property bool showPinAction: visibleEntryActions.includes("pin")
     readonly property bool showEditAction: visibleEntryActions.includes("edit")
     readonly property bool showDeleteAction: visibleEntryActions.includes("delete")
-    readonly property bool showPreviewAction: ClipboardService.canPreviewEntry(entry)
     readonly property bool showPinnedIndicator: effectivePinned && !showPinAction
-    readonly property bool showAnyAction: showCopyAction || showPasteAction || showPinAction || showEditAction || showDeleteAction || showPinnedIndicator || showPreviewAction
+    readonly property bool showAnyAction: showCopyAction || showPasteAction || showPinAction || showEditAction || showDeleteAction || showPinnedIndicator
 
     keyForwardTargets: [modal.modalFocusScope]
     firstInGroup: itemIndex === 0
     lastInGroup: itemIndex === listView.count - 1
     Accessible.name: entryPreview
     Accessible.description: entryType === "image" ? I18n.tr("Image") : I18n.tr("Text")
+    onIsHoveredChanged: entryHoverChanged(isHovered)
+    onPointerMoved: entryHoverChanged(isHovered)
     onClicked: {
         if (SettingsData.clipboardClickToPaste) {
             pasteRequested();
@@ -53,17 +54,6 @@ DListItem {
         anchors.verticalCenter: parent.verticalCenter
         spacing: Theme.spacingXS
         visible: root.showAnyAction
-
-        DActionButton {
-            Keys.forwardTo: [root.modal.modalFocusScope]
-            objectName: "previewEntry"
-            iconName: "preview"
-            tooltipText: I18n.tr("Preview", "verb, clipboard entry action button tooltip", true)
-            iconSize: Theme.iconSizeSmall
-            iconColor: root.contentColor
-            visible: root.showPreviewAction
-            onClicked: root.previewRequested()
-        }
 
         Item {
             width: Theme.iconButtonSize

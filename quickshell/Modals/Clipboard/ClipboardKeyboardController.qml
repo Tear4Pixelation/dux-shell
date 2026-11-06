@@ -82,59 +82,7 @@ QtObject {
         modal.editEntry(entries[index]);
     }
 
-    function handlePreviewKey(event) {
-        const ctrl = (event.modifiers & Qt.ControlModifier) !== 0;
-        switch (event.key) {
-        case Qt.Key_Escape:
-            modal.closePreview();
-            break;
-        case Qt.Key_Space:
-            if (ctrl) {
-                modal.closePreview();
-            }
-            break;
-        case Qt.Key_Down:
-        case Qt.Key_Tab:
-            selectNext();
-            break;
-        case Qt.Key_Up:
-        case Qt.Key_Backtab:
-            selectPrevious();
-            break;
-        case Qt.Key_N:
-        case Qt.Key_J:
-            if (ctrl) {
-                selectNext();
-            }
-            break;
-        case Qt.Key_P:
-        case Qt.Key_K:
-            if (ctrl) {
-                selectPrevious();
-            }
-            break;
-        case Qt.Key_Return:
-        case Qt.Key_Enter:
-            {
-                const shifted = (event.modifiers & Qt.ShiftModifier) !== 0;
-                const paste = shifted ? !SettingsData.clipboardEnterToPaste : SettingsData.clipboardEnterToPaste;
-                if (paste) {
-                    modal.pasteSelected();
-                } else {
-                    copySelected();
-                }
-            }
-            break;
-        }
-        event.accepted = true;
-    }
-
     function handleKey(event) {
-        if (modal.mode === "preview") {
-            handlePreviewKey(event);
-            return;
-        }
-
         if (modal.mode === "editor") {
             if (event.key === Qt.Key_Escape) {
                 modal.mode = "history";
@@ -230,12 +178,6 @@ QtObject {
             case Qt.Key_E:
                 editSelected();
                 event.accepted = true;
-                return;
-            case Qt.Key_Space:
-                if (ClipboardService.keyboardNavigationActive) {
-                    modal.openPreview();
-                    event.accepted = true;
-                }
                 return;
             }
         }

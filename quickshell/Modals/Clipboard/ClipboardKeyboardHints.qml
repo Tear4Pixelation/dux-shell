@@ -42,10 +42,6 @@ Rectangle {
                 }
             ].concat(pasteHints, [
                 {
-                    keys: ["Ctrl+Space"],
-                    label: I18n.tr("Preview", "verb, clipboard entry action button tooltip", true)
-                },
-                {
                     keys: ["Ctrl+E"],
                     label: I18n.tr("Edit")
                 },

@@ -31,7 +31,6 @@ FocusScope {
     readonly property bool keyboardNavigationActive: ClipboardService.keyboardNavigationActive
     readonly property bool clearsFilteredOnly: activeTab === "recents" && ClipboardService.filterActive
     readonly property bool canClear: clearsFilteredOnly ? unpinnedTotal > 0 : ClipboardService.historyCount > 0
-    readonly property var currentEntry: selectedEntry()
 
     readonly property var modalFocusScope: root
     property alias searchField: historyContent.searchField
@@ -64,11 +63,6 @@ FocusScope {
     onModeChanged: {
         if (mode === "history" && visible)
             searchField?.forceActiveFocus();
-    }
-    onCurrentEntryChanged: {
-        if (mode === "preview" && !ClipboardService.canPreviewEntry(currentEntry)) {
-            closePreview();
-        }
     }
 
     onActiveFilterChanged: {
@@ -128,23 +122,6 @@ FocusScope {
 
     function copyEntryAsText(entry) {
         ClipboardService.copyEntry(entry, () => root.requestClose(false), true);
-    }
-
-    function openPreview(index = selectedIndex) {
-        const entries = activeTab === "saved" ? pinnedEntries : unpinnedEntries;
-        if (!ClipboardService.canPreviewEntry(entries[index])) {
-            return;
-        }
-        ClipboardService.selectedIndex = index;
-        ClipboardService.keyboardNavigationActive = true;
-        mode = "preview";
-    }
-
-    function closePreview() {
-        if (mode !== "preview") {
-            return;
-        }
-        mode = "history";
     }
 
     function selectedEntry() {
@@ -312,21 +289,6 @@ FocusScope {
         focus: root.mode === "editor"
         modal: root
         keyController: keyboardController
-    }
-
-    Loader {
-        id: previewLoader
-
-        anchors.fill: parent
-        z: 200
-        active: root.mode === "preview"
-        focus: root.mode === "preview"
-
-        sourceComponent: ClipboardImagePreview {
-            entry: root.currentEntry
-            focus: true
-            onCloseRequested: root.closePreview()
-        }
     }
 
     states: [

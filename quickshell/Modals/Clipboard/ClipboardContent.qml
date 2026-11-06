@@ -16,6 +16,15 @@ Item {
 
     readonly property var entries: modal.activeTab === "saved" ? modal.pinnedEntries : modal.unpinnedEntries
 
+    // Index of the entry under the pointer; -1 once the pointer leaves or the keyboard takes over.
+    property int hoveredIndex: -1
+    // The hovered entry wins; otherwise the keyboard selection, when it is shown.
+    readonly property int previewIndex: hoveredIndex >= 0 ? hoveredIndex : (modal.keyboardNavigationActive ? modal.selectedIndex : -1)
+    readonly property var previewEntry: {
+        const entry = previewIndex >= 0 && previewIndex < entries.length ? entries[previewIndex] : null;
+        return ClipboardService.canPreviewEntry(entry) ? entry : null;
+    }
+
     readonly property var filterOptions: [I18n.tr("All"), I18n.tr("Text"), I18n.tr("Long Text"), I18n.tr("Image", "noun, clipboard entry type and filter option")]
     readonly property var filterValues: ["all", "text", "long_text", "image"]
 
@@ -80,8 +89,49 @@ Item {
     Connections {
         target: clipboardContent.modal
         function onActiveTabChanged() {
+            clipboardContent.hoveredIndex = -1;
             resetScroll.schedule();
         }
+    }
+
+    Connections {
+        target: ClipboardService
+        function onSelectedIndexChanged() {
+            clipboardContent.hoveredIndex = -1;
+        }
+        function onKeyboardNavigationActiveChanged() {
+            clipboardContent.hoveredIndex = -1;
+        }
+    }
+
+    // Top of the previewed entry in content coordinates, clamped to the list viewport.
+    function previewEntryTop() {
+        const listView = clipboardListView;
+        const item = previewIndex >= 0 ? listView.itemAtIndex(previewIndex) : null;
+        if (!item)
+            return NaN;
+        const itemTop = item.mapToItem(clipboardContent, 0, 0).y;
+        const viewportTop = listContainer.y;
+        const viewportBottom = listContainer.y + listContainer.height;
+        if (itemTop + item.height <= viewportTop || itemTop >= viewportBottom)
+            return NaN;
+        return Math.max(itemTop, viewportTop);
+    }
+
+    readonly property real previewTop: {
+        // itemAtIndex() and mapToItem() are not bindable; track what moves or creates rows.
+        void clipboardListView.contentY;
+        void clipboardListView.count;
+        void clipboardListView.height;
+        void listContainer.y;
+        return previewEntryTop();
+    }
+
+    ClipboardImagePreview {
+        anchorItem: clipboardContent
+        entry: clipboardContent.previewEntry
+        entryTop: isNaN(clipboardContent.previewTop) ? 0 : clipboardContent.previewTop
+        shown: !!clipboardContent.previewEntry && !isNaN(clipboardContent.previewTop) && clipboardContent.visible && clipboardContent.modal.mode === "history" && !clipboardContent.contextMenuActive && (clipboardContent.modal.surfaceHost?.shouldBeVisible ?? true)
     }
 
     DeferredAction {
@@ -303,7 +353,14 @@ Item {
                 onPinRequested: targetEntry => clipboardContent.modal.pinEntry(targetEntry)
                 onUnpinRequested: targetEntry => clipboardContent.modal.unpinEntry(targetEntry)
                 onEditRequested: clipboardContent.modal.editEntry(modelData)
-                onPreviewRequested: clipboardContent.modal.openPreview(index)
+                onEntryHoverChanged: hovering => {
+                    if (hovering) {
+                        clipboardContent.hoveredIndex = index;
+                        return;
+                    }
+                    if (clipboardContent.hoveredIndex === index)
+                        clipboardContent.hoveredIndex = -1;
+                }
                 onContextMenuRequested: (mouseX, mouseY) => {
                     const pos = mapToItem(null, mouseX, mouseY);
                     clipboardContent.showContextMenu(modelData, pos.x, pos.y);
